@@ -7,11 +7,14 @@ using Photon.Realtime;
 
 public class CreateRoomMenu : MonoBehaviourPunCallbacks
 {
+    private LobbyCanvases lobbyCanvases;
+
     private TMP_InputField roomInputName;
 
     private void Awake()
     {
         roomInputName = GetComponentInChildren<TMP_InputField>();
+        lobbyCanvases = GetComponentInParent<LobbyCanvases>();
     }
 
     public void OnClickCreateRoom()
@@ -26,6 +29,7 @@ public class CreateRoomMenu : MonoBehaviourPunCallbacks
     public override void OnCreatedRoom()
     {
         print("Created room" + roomInputName.text + "successfully");
+        lobbyCanvases.CurrRoomCanvas.Show();
     }
 
     public override void OnCreateRoomFailed(short returnCode, string message)

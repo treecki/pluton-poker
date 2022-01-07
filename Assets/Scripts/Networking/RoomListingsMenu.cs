@@ -32,15 +32,16 @@ public class RoomListingsMenu : MonoBehaviourPunCallbacks
                     listings.RemoveAt(index);
                 }
             }
-
-            RoomListing roomListing = Instantiate(roomListingPrefab, content);
-
-            if (roomListing)
+            else
             {
-                roomListing.SetRoomInfo(roomInfo);
-                listings.Add(roomListing);
-            }
+                RoomListing roomListing = Instantiate(roomListingPrefab, content);
 
+                if (roomListing)
+                {
+                    roomListing.SetRoomInfo(roomInfo);
+                    listings.Add(roomListing);
+                }
+            }
         }
     }
 }
