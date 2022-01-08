@@ -14,9 +14,19 @@ public class RoomListingsMenu : MonoBehaviourPunCallbacks
     private RoomListing roomListingPrefab;
     private List<RoomListing> listings = new List<RoomListing>();
 
+    private LobbyCanvases lobbyCanvases;
+
     private void Awake()
     {
+        lobbyCanvases = GetComponentInParent<LobbyCanvases>();
         content = GetComponentInChildren<ScrollRect>().content;
+    }
+
+    public override void OnJoinedRoom()
+    {
+        lobbyCanvases.CurrRoomCanvas.Show();
+        content.DestroyChildren();
+        listings.Clear();
     }
 
     public override void OnRoomListUpdate(List<RoomInfo> roomList)
@@ -34,13 +44,21 @@ public class RoomListingsMenu : MonoBehaviourPunCallbacks
             }
             else
             {
-                RoomListing roomListing = Instantiate(roomListingPrefab, content);
-
-                if (roomListing)
+                int index = listings.FindIndex(x => x.RoomInfo.Name == roomInfo.Name);
+                if (index == -1)
                 {
-                    roomListing.SetRoomInfo(roomInfo);
-                    listings.Add(roomListing);
+                    RoomListing roomListing = Instantiate(roomListingPrefab, content);
+                    if (roomListing)
+                    {
+                        roomListing.SetRoomInfo(roomInfo);
+                        listings.Add(roomListing);
+                    }
                 }
+                else
+                {
+                    //Modify current listing here
+                }
+
             }
         }
     }

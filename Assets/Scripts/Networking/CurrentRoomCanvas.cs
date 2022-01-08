@@ -6,9 +6,14 @@ public class CurrentRoomCanvas : MonoBehaviour
 {
     private LobbyCanvases lobbyCanvases;
 
+    private PlayerListingsMenu playerListingsMenu;
+    private LeaveRoomMenu leaveRoomMenu;
+    public LeaveRoomMenu LeaveRoomMenu { get { return leaveRoomMenu; } }
     private void Awake()
     {
         lobbyCanvases = GetComponentInParent<LobbyCanvases>();
+        playerListingsMenu = GetComponentInChildren<PlayerListingsMenu>();
+        leaveRoomMenu = GetComponentInChildren<LeaveRoomMenu>();
     }
 
     public void Show()
@@ -16,7 +21,7 @@ public class CurrentRoomCanvas : MonoBehaviour
         gameObject.SetActive(true);
     }
 
-    private void Hide()
+    public void Hide()
     {
         gameObject.SetActive(false);
     }

@@ -14,6 +14,6 @@ public class LobbyCanvases : MonoBehaviour
 
     private void Awake()
     {
-
+        currRoomCanvas.Hide();
     }
 }
