@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using System;
 
-public class Player
+public class PokerPlayer
 {
     protected int playerID;
     public int PlayerID { get { return playerID; } }
@@ -24,7 +24,7 @@ public class Player
 
     public Action<Bet> OnPlayerEvent = delegate { };
 
-    public Player(int _id)
+    public PokerPlayer(int _id)
     {
         playerID = _id;
         playerHand = new PlayerHand();

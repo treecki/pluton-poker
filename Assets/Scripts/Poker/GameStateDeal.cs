@@ -85,7 +85,7 @@ public class GameStateDeal : GameState
 
     public void NewRound()
     {
-        foreach (Player p in psm.PlayersInGame)
+        foreach (PokerPlayer p in psm.PlayersInGame)
         {
             p.PlayerHand.ClearHand();
         }

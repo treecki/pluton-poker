@@ -6,8 +6,8 @@ using TMPro;
 public class PlayerObject : MonoBehaviour
 {
 
-    private Player player;
-    public Player Player { get { return player; } }
+    private PokerPlayer player;
+    public PokerPlayer Player { get { return player; } }
 
     private int playerNum;
 
@@ -23,7 +23,7 @@ public class PlayerObject : MonoBehaviour
         psm = PokerStateMachine.PSM;
     }
 
-    public void SetHand(Player _player)
+    public void SetHand(PokerPlayer _player)
     {
         player = _player;
         playerNum = player.PlayerID;

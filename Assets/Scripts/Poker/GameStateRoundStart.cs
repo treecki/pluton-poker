@@ -28,7 +28,7 @@ public class GameStateRoundStart : GameState
         psm.queuePlayersInRound.Clear();
 
         //Lets get the index of the small blind because we'll have to force them to start and play bet in the beginning
-        List<Player> activePlayers = psm.GetActivePlayers();
+        List<PokerPlayer> activePlayers = psm.GetActivePlayers();
         int firstIndex = (activePlayers.IndexOf(psm.BetManager.BigBlindPlayer) + 1) % activePlayers.Count;
 
         for (int i = 0; i < activePlayers.Count; i++)

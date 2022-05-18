@@ -8,7 +8,7 @@ public class GameStateBetting : GameState
     Bet highestBet;
     public Bet HighestBet { get { return highestBet; } }
 
-    Player currPlayerBetting;
+    PokerPlayer currPlayerBetting;
 
     public GameStateBetting(PokerStateMachine _psm) : base(_psm)
     {
@@ -37,7 +37,7 @@ public class GameStateBetting : GameState
 
     private void ResetCurrentBets()
     {
-        foreach (Player p in psm.queuePlayersInRound)
+        foreach (PokerPlayer p in psm.queuePlayersInRound)
         {
             p.ResetCurrentBet();
         }
@@ -52,7 +52,7 @@ public class GameStateBetting : GameState
 
     private void RequestAction()
     {
-        Player nextPlayer = psm.GetNextPlayerInQueue();
+        PokerPlayer nextPlayer = psm.GetNextPlayerInQueue();
         nextPlayer.canInput = true;
         nextPlayer.OnPlayerEvent += ReceiveAction;
     }
@@ -70,7 +70,7 @@ public class GameStateBetting : GameState
 
         Debug.Log("Receive Action: " + newBet.amount);
 
-        Player nextPlayer = psm.queuePlayersInRound.Dequeue();
+        PokerPlayer nextPlayer = psm.queuePlayersInRound.Dequeue();
         nextPlayer.canInput = false;
         nextPlayer.OnPlayerEvent -= ReceiveAction;
 
@@ -96,7 +96,7 @@ public class GameStateBetting : GameState
 
     private void AddBet(Bet newBet)
     {
-        Player p = psm.GetPlayerWithID(newBet.playerID);
+        PokerPlayer p = psm.GetPlayerWithID(newBet.playerID);
 
         //To check for highest bet, we check how the current bet on the player has changed
         //New bet could be a call or a raise, but it won't include the amount previously bet

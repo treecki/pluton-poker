@@ -4,8 +4,8 @@ using UnityEngine;
 
 public class GameStateRoundEnd : GameState
 {
-    private Player winningPlayer;
-    public Player WinningPlayer { get { return winningPlayer; } }
+    private PokerPlayer winningPlayer;
+    public PokerPlayer WinningPlayer { get { return winningPlayer; } }
 
     private string winningMessage;
     public string WinningMessage { get { return winningMessage; } }
@@ -26,7 +26,7 @@ public class GameStateRoundEnd : GameState
         else
         {
             winningPlayer = psm.GetPlayerWithID(EvaluateHands());
-            foreach (Player p in psm.queuePlayersInRound)
+            foreach (PokerPlayer p in psm.queuePlayersInRound)
             {
                 Debug.Log("P" + p.PlayerID + "  has " + p.PlayerHand.FinalHandInfo.HandCombo);
             }
@@ -48,7 +48,7 @@ public class GameStateRoundEnd : GameState
     //Evaluate all the hands so we know we have the final hand info ready
     protected void EvaluateAllHandsInRound()
     {
-        foreach (Player p in psm.queuePlayersInRound)
+        foreach (PokerPlayer p in psm.queuePlayersInRound)
         {
             p.PlayerHand.EvaluateHand(psm.riverHand);
         }
@@ -58,9 +58,9 @@ public class GameStateRoundEnd : GameState
     {
         EvaluateAllHandsInRound();
 
-        Player highestPlayer = null;
+        PokerPlayer highestPlayer = null;
 
-        foreach (Player p in psm.queuePlayersInRound)
+        foreach (PokerPlayer p in psm.queuePlayersInRound)
         {
 
             if (highestPlayer == null)

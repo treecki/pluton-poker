@@ -18,10 +18,10 @@ public class PokerStateMachine : StateMachine
 
     public CardFaces DeckCardVisuals;
 
-    protected List<Player> playersInGame;
-    public List<Player> PlayersInGame { get { return playersInGame; } }
+    protected List<PokerPlayer> playersInGame;
+    public List<PokerPlayer> PlayersInGame { get { return playersInGame; } }
 
-    public Queue<Player> queuePlayersInRound;
+    public Queue<PokerPlayer> queuePlayersInRound;
 
     public GameObject cardPrefab;
     public GameObject handPrefab;
@@ -72,17 +72,17 @@ public class PokerStateMachine : StateMachine
 
     public void SetUpGame()
     {
-        playersInGame = new List<Player>();
+        playersInGame = new List<PokerPlayer>();
         riverHand = new GenHand();
 
         for (int i = 0; i < NUM_OF_PLAYERS; i++)
         {
-            Player p = new Player(i);
+            PokerPlayer p = new PokerPlayer(i);
             p.AddMoney(buyInAmount); 
             playersInGame.Add(p);
         }
 
-        queuePlayersInRound = new Queue<Player>();
+        queuePlayersInRound = new Queue<PokerPlayer>();
 
         betManager = new BettingManager(this);
 
@@ -111,15 +111,15 @@ public class PokerStateMachine : StateMachine
         inputState.Run();
     }
 
-    public Player GetPlayerWithID(int _id)
+    public PokerPlayer GetPlayerWithID(int _id)
     {
-        Player currPlayer = playersInGame.Find(x => x.PlayerID == _id);
+        PokerPlayer currPlayer = playersInGame.Find(x => x.PlayerID == _id);
         return currPlayer;
     }
 
     public void CreateAllHandsVisuals()
     {
-        foreach(Player p in queuePlayersInRound)
+        foreach(PokerPlayer p in queuePlayersInRound)
         {
             CreatePlayerHandVisual(p.PlayerID);
         }
@@ -130,7 +130,7 @@ public class PokerStateMachine : StateMachine
         GameObject playerHandGameObject = Instantiate(handPrefab);
         playerHandGameObject.transform.parent = PokerHandsTransform;
         PlayerObject handObject = playerHandGameObject.GetComponent<PlayerObject>();
-        Player p = GetPlayerWithID(playerID);
+        PokerPlayer p = GetPlayerWithID(playerID);
         handObject.SetHand(p);
         handObject.CreateCards();
     }
@@ -161,10 +161,10 @@ public class PokerStateMachine : StateMachine
         }
     }
 
-    public List<Player> GetActivePlayers()
+    public List<PokerPlayer> GetActivePlayers()
     {
-        List<Player> activePlayers = new List<Player>();
-        foreach (Player p in playersInGame)
+        List<PokerPlayer> activePlayers = new List<PokerPlayer>();
+        foreach (PokerPlayer p in playersInGame)
         {
             if (!p.IsPlayerBroke())
             {
@@ -175,20 +175,20 @@ public class PokerStateMachine : StateMachine
         return activePlayers;
     }
 
-    public Player GetNextPlayerInQueue()
+    public PokerPlayer GetNextPlayerInQueue()
     {
         return queuePlayersInRound.Peek();
     }
 
     public void SendNextToBackOfQueue()
     {
-        Player p = queuePlayersInRound.Dequeue();
+        PokerPlayer p = queuePlayersInRound.Dequeue();
         queuePlayersInRound.Enqueue(p);
     }
 
     public void SetStartPlayerInQueue()
     {
-        Player startPlayer = GetStartPlayer();
+        PokerPlayer startPlayer = GetStartPlayer();
 
         while (GetNextPlayerInQueue().PlayerID != startPlayer.PlayerID)
         {
@@ -196,12 +196,12 @@ public class PokerStateMachine : StateMachine
         }
     }
 
-    public Player GetStartPlayer()
+    public PokerPlayer GetStartPlayer()
     {
         int indexBigBlind = Array.IndexOf(playersInGame.ToArray(), BetManager.BigBlindPlayer);
 
         int counter = 0;
-        Player startPlayer;
+        PokerPlayer startPlayer;
         //search for a start player that's not folded and return that
         do
         {

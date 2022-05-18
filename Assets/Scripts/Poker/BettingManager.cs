@@ -9,13 +9,13 @@ public class BettingManager
 
     private float smallBlind = .25f;
     public float SmallBlind { get { return smallBlind; } }
-    private Player smallBlindPlayer;
-    public Player SmallBlindPlayer { get { return smallBlindPlayer; } }
+    private PokerPlayer smallBlindPlayer;
+    public PokerPlayer SmallBlindPlayer { get { return smallBlindPlayer; } }
 
     private float bigBlind = .5f;
     public float BigBlind { get { return bigBlind; } }
-    private Player bigBlindPlayer;
-    public Player BigBlindPlayer { get { return bigBlindPlayer; } }
+    private PokerPlayer bigBlindPlayer;
+    public PokerPlayer BigBlindPlayer { get { return bigBlindPlayer; } }
 
     PokerStateMachine psm;
 
@@ -31,7 +31,7 @@ public class BettingManager
         roundNumber = 1;
     }
 
-    public void GivePotToPlayer(Player p)
+    public void GivePotToPlayer(PokerPlayer p)
     {
         p.AddMoney(potAmount);
         potAmount = 0;
@@ -51,13 +51,13 @@ public class BettingManager
 
     public void ShiftBlinds()
     {
-        List<Player> ActivePlayers = psm.GetActivePlayers();
+        List<PokerPlayer> ActivePlayers = psm.GetActivePlayers();
         int indexOfPlayer = psm.PlayersInGame.IndexOf(bigBlindPlayer);
         bool setNewBlinds = false;
 
         while (!setNewBlinds)
         {
-            Player newPlayer = psm.PlayersInGame[indexOfPlayer];
+            PokerPlayer newPlayer = psm.PlayersInGame[indexOfPlayer];
 
             if (ActivePlayers.Contains(newPlayer))
             {
