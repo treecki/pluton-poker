@@ -223,7 +223,7 @@ public class MasterClientMonitor : MonoBehaviourPunCallbacks
             consequtiveHighPingCount = 0;
 
         //If high ping 3 times in a row then request setting a new master.
-        if (consequtiveHighPingCount >= 3)
+        if (consequtiveHighPingCount >= HIGH_PING_TURNOVER_REQUIREMENT)
         {
             takeoverRequestTime = Time.unscaledTime;
             base.photonView.RPC("RPC_RequestMasterClient", RpcTarget.MasterClient, playerPings[lowestAverageIndex].Player);
