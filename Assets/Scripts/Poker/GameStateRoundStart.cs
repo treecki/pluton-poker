@@ -12,7 +12,7 @@ public class GameStateRoundStart : GameState
     public override void Run()
     {
         base.Run();
-        if (!psm.AuthorityController.TryBeginAuthorityMutation("GameStateRoundStart.Run"))
+        if (!psm.AuthorityController.TryBeginAuthorityMutation(PokerAuthorityController.MutationReasonGameStateRoundStartRun))
         {
             return;
         }
@@ -20,7 +20,7 @@ public class GameStateRoundStart : GameState
         psm.MapPhotonPlayersToSeats();
         CreateDeck();
         AddRoundPlayers();
-        psm.AuthorityController.PublishSnapshot("RoundStart.ReadyToDeal");
+        psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseRoundStartReadyToDeal);
         psm.SetState(psm.StateDeal);
     }
 

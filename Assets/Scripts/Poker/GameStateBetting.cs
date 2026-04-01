@@ -18,13 +18,13 @@ public class GameStateBetting : GameState
     public override void Run()
     {
         base.Run();
-        if (!psm.AuthorityController.TryBeginAuthorityMutation("GameStateBetting.Run"))
+        if (!psm.AuthorityController.TryBeginAuthorityMutation(PokerAuthorityController.MutationReasonGameStateBettingRun))
         {
             return;
         }
 
         StartBetRound();
-        psm.AuthorityController.PublishSnapshot("Betting.Started");
+        psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseBettingStarted);
     }
 
     private void StartBetRound()
@@ -60,9 +60,11 @@ public class GameStateBetting : GameState
     {
         PokerPlayer nextPlayer = psm.GetNextPlayerInQueue();
         currPlayerBetting = nextPlayer;
+        // Only the seat owned by this client should be interactable in multiplayer.
+        // Offline we still allow local control so the table remains playable without Photon.
         nextPlayer.canInput = psm.AuthorityController.CanControlPlayer(nextPlayer);
         nextPlayer.OnPlayerEvent += ReceiveAction;
-        psm.AuthorityController.PublishSnapshot("Betting.WaitingForAction");
+        psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseBettingWaitingForAction);
     }
 
 
@@ -75,7 +77,7 @@ public class GameStateBetting : GameState
 
     private void ReceiveAction(Bet newBet)
     {
-        if (!psm.AuthorityController.TryBeginAuthorityMutation("GameStateBetting.ReceiveAction")) { return; }
+        if (!psm.AuthorityController.TryBeginAuthorityMutation(PokerAuthorityController.MutationReasonGameStateBettingReceiveAction)) { return; }
         if (psm.GetNextPlayerInQueue().PlayerID != newBet.playerID) { return; }
 
         Debug.Log("Receive Action: " + newBet.amount);
@@ -89,7 +91,7 @@ public class GameStateBetting : GameState
             AddBet(newBet);
         }
 
-        psm.AuthorityController.PublishSnapshot("Betting.ActionApplied");
+        psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseBettingActionApplied);
 
         if (psm.queuePlayersInRound.Count <= 1)
         {

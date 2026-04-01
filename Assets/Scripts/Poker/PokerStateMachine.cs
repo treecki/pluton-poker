@@ -81,7 +81,7 @@ public class PokerStateMachine : StateMachine
         }
         else
         {
-            authorityController.PublishSnapshot("AwaitingAuthorityStart");
+            authorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseAwaitingAuthorityStart);
         }
     }
 
@@ -111,7 +111,7 @@ public class PokerStateMachine : StateMachine
 
     public void StartRound()
     {
-        if (!authorityController.TryBeginAuthorityMutation("StartRound"))
+        if (!authorityController.TryBeginAuthorityMutation(PokerAuthorityController.MutationReasonStartRound))
         {
             return;
         }
@@ -121,7 +121,7 @@ public class PokerStateMachine : StateMachine
 
     public void RestartRound()
     {
-        if (!authorityController.TryBeginAuthorityMutation("RestartRound"))
+        if (!authorityController.TryBeginAuthorityMutation(PokerAuthorityController.MutationReasonRestartRound))
         {
             return;
         }
