@@ -95,6 +95,23 @@ public class PokerPlayer
         return false;
     }
 
+    public bool CommitResolvedBet(float amountDiff)
+    {
+        if (amountDiff < 0f)
+        {
+            return false;
+        }
+
+        if (playerMoney - amountDiff < 0f)
+        {
+            return false;
+        }
+
+        currBet.amount += amountDiff;
+        playerMoney -= amountDiff;
+        return true;
+    }
+
     public void ResetCurrentBet()
     {
         currBet.amount = 0;
