@@ -35,9 +35,12 @@ public class PlayerHand : GenHand
     public Hand EvaluateHand(GenHand RiverHand)
     {
         Hand currHand = Hand.NULL;
-        //cardHand = new List<Card>();
 
         cardHand.Clear();
+        sortedValueHand.Clear();
+        sortedFlushHand.Clear();
+        suitDict.Clear();
+        valueDict.Clear();
         potentialHandList.Clear();
 
         foreach (Card c in RiverHand.CardHand)
@@ -60,20 +63,13 @@ public class PlayerHand : GenHand
 
         SetHighCard(ref currHand);
 
-        //get the number of each suit on hand
         GetNumberOfAllSuits();
-
-        //get the number of each value on hand
         GetNumberOfAllValues();
 
         SetPairs(ref currHand);
-
         SetFlush(ref currHand);
-
         SetStraight(ref currHand);
-
         SetStraightFlush(ref currHand);
-
         SetRoyalFlush(ref currHand);
 
         finalHandInfo = GetHighestPotentialHand(currHand);
@@ -105,7 +101,6 @@ public class PlayerHand : GenHand
                 }
                 else if (highestHandInfo.HighCard == listHands[i].HighCard)
                 {
-                    //umm tie but fuck it?
                     highestHandInfo = listHands[i];
                 }
             }            
@@ -144,60 +139,57 @@ public class PlayerHand : GenHand
     {
         foreach (SUIT s in suitDict.Keys)
         {
-            if (suitDict[s] == 5)
+            if (suitDict[s] >= 5)
             {
                 if (currHand < Hand.Flush)
                 {
                     currHand = Hand.Flush;
                 }
-                Flush();
+                Flush(s);
             }
         }
     }
 
     protected void SetStraight(ref Hand currHand)
     {
-        //So if we are checking a straight with 7 cards
-        //We essentially just need to go through the first 3
-        for (int i = 0; i+5 < sortedValueHand.Count; i++)
+        List<int> distinctValues = sortedValueHand
+            .Select(card => (int)card.MyValue)
+            .Distinct()
+            .OrderBy(value => value)
+            .ToList();
+
+        if (distinctValues.Contains((int)VALUE.VA))
+        {
+            distinctValues.Insert(0, 1);
+        }
+
+        for (int i = 0; i <= distinctValues.Count - 5; i++)
         {
             bool isStraight = true;
-            int initCheck = 0;
-            //Lets go through 5 cards with the starting index
-            for (int j = i; j < i+5; j++ )
+            for (int j = 1; j < 5; j++)
             {
-                int currValue = (int)sortedValueHand[j].MyValue;
-                if (j == 0)
-                {
-                    initCheck = currValue;
-                }
-                else if (currValue != initCheck + 1)
+                if (distinctValues[i + j] != distinctValues[i] + j)
                 {
                     isStraight = false;
+                    break;
                 }
-                else
-                {
-                    initCheck = currValue;
-                }
+            }
 
-                //If we are at the very last index of this straight check
-                //And if isStraight was never interrupted
-                if (j == i+4 && isStraight)
-                {
-                    int firstIndex = i;
-                    int lastIndex = j;
-                    int total = (int)sortedValueHand[j].MyValue;
-                    int highCard = (int)sortedValueHand[j].MyValue;
+            if (!isStraight)
+            {
+                continue;
+            }
 
-                    int[] cardIndexes = Get5CardIndexesInOrder(firstIndex);
+            List<int> straightValues = distinctValues.Skip(i).Take(5).ToList();
+            int[] cardIndexes = GetCardIndexesForValues(straightValues);
+            int highCard = straightValues.Last() == 1 ? 5 : straightValues.Last();
+            int total = highCard;
 
-                    potentialHandList.Add(CreateHandInfo(cardIndexes, Hand.Straight, total, highCard));
+            potentialHandList.Add(CreateHandInfo(cardIndexes, Hand.Straight, total, highCard));
 
-                    if (currHand < Hand.Straight)
-                    {
-                        currHand = Hand.Straight;
-                    }
-                }
+            if (currHand < Hand.Straight)
+            {
+                currHand = Hand.Straight;
             }
         }
     }
@@ -370,45 +362,38 @@ public class PlayerHand : GenHand
         int[] cardIndexes = new int[5];
         int highCard = 0;
         int index = 0;
-        for (int i = 0; i < sortedValueHand.Count - 1; i++)
+        for (int i = 0; i < sortedValueHand.Count - 3; i++)
         {
-
-            if (i + 3 < sortedValueHand.Count)
+            if (sortedValueHand[i].MyValue == sortedValueHand[i + 3].MyValue)
             {
-                //Do we have a 3 of a kind
-                if (sortedValueHand[i].MyValue == sortedValueHand[i + 3].MyValue)
+                cardIndexes[index++] = i;
+                cardIndexes[index++] = i + 1;
+                cardIndexes[index++] = i + 2;
+                cardIndexes[index++] = i + 3;
+
+                int kickerIndex = -1;
+                for (int j = sortedValueHand.Count - 1; j >= 0; j--)
                 {
-                    //Put the pair in the card indexes
-                    cardIndexes[index] = i;
-                    index++;
-                    cardIndexes[index] = i + 1;
-                    index++;
-                    cardIndexes[index] = i + 2;
-                    index++;
-                    cardIndexes[index] = i + 3;
-                    index++;
-
-                    //Lets get the highest card
-                    if (i + 2 == sortedValueHand.Count - 1)
+                    if (j < i || j > i + 3)
                     {
-                        highCard = (int)sortedValueHand[i - 1].MyValue;
-                        cardIndexes[index] = i - 1;
+                        kickerIndex = j;
+                        break;
                     }
-                    else
-                    {
-                        highCard = (int)sortedValueHand[sortedValueHand.Count - 1].MyValue;
-                        cardIndexes[sortedValueHand.Count - 1] = i - 1;
-                    }
-
-                    break;
                 }
+
+                if (kickerIndex >= 0)
+                {
+                    cardIndexes[index] = kickerIndex;
+                    highCard = (int)sortedValueHand[kickerIndex].MyValue;
+                }
+
+                break;
             }
         }
 
-
         int total = (int)sortedValueHand[cardIndexes[0]].MyValue * 4;
 
-        potentialHandList.Add(CreateHandInfo(cardIndexes, Hand.ThreeKind, total, highCard));
+        potentialHandList.Add(CreateHandInfo(cardIndexes, Hand.FourKind, total, highCard));
     }
 
     protected void FullHouse()
@@ -418,9 +403,6 @@ public class PlayerHand : GenHand
         int index = 0;
         int total = 0;
 
-        //Lets go through all the cards from the top
-        //This way if we have 2 pairs and a 3 of a kind
-        //It'll automatically grab the highest pair
         for (int i = sortedValueHand.Count - 1; i >= 0 ; i--)
         {
             if (index > 4)
@@ -442,14 +424,11 @@ public class PlayerHand : GenHand
                     cardIndexes[index] = i - 2;
                     index++;
 
-                    //Increment past the 3
                     i -= 2;
                 }
             }
             else if (i - 1 >= 0)
             {
-                //We need to check if we have already found the first pair
-                //If we have then we have to ignore second by checking the index doesn't equal 2
                 if (sortedValueHand[i] == sortedValueHand[i - 1] && index != 2)
                 {
                     total += (int)sortedValueHand[i].MyValue * 2;
@@ -459,7 +438,6 @@ public class PlayerHand : GenHand
                     cardIndexes[index] = i - 1;
                     index++;
 
-                    //Increment past the pair
                     i--;
                 }
             }
@@ -468,33 +446,30 @@ public class PlayerHand : GenHand
         potentialHandList.Add(CreateHandInfo(cardIndexes, Hand.FullHouse, total, highCard));
     }
 
-    protected void Flush()
+    protected void Flush(SUIT suit)
     {
-        int firstIndex = 0;
+        List<int> suitedIndexes = new List<int>();
 
-        for (int i = 0; i+5 < sortedFlushHand.Count; i++)
+        for (int i = 0; i < sortedValueHand.Count; i++)
         {
-            if (sortedFlushHand[i].MySuit == sortedFlushHand[i+5].MySuit)
+            if (sortedValueHand[i].MySuit == suit)
             {
-                if (firstIndex < i) firstIndex = 0;
+                suitedIndexes.Add(i);
             }
         }
 
-        int lastIndex = firstIndex + 4;
-        int total = 0;
-        int highCard = 0;
+        suitedIndexes = suitedIndexes
+            .OrderBy(index => sortedValueHand[index].MyValue)
+            .ToList();
 
-        for (int i = sortedValueHand.Count - 1; i > -1; i--)
+        if (suitedIndexes.Count < 5)
         {
-            if(SortedValueHand[i].MySuit == sortedFlushHand[firstIndex].MySuit)
-            {
-                total = (int)SortedValueHand[i].MyValue;
-                highCard = (int)SortedValueHand[i].MyValue;
-                break;
-            }
+            return;
         }
 
-        int[] cardIndexes = Get5CardIndexesInOrder(firstIndex);
+        int[] cardIndexes = suitedIndexes.Skip(suitedIndexes.Count - 5).ToArray();
+        int highCard = (int)sortedValueHand[cardIndexes[cardIndexes.Length - 1]].MyValue;
+        int total = highCard;
 
         potentialHandList.Add(CreateHandInfo(cardIndexes, Hand.Flush, total, highCard));
     }
@@ -506,12 +481,8 @@ public class PlayerHand : GenHand
         int index = 0;
         for (int i = 0; i < sortedValueHand.Count - 1; i++)
         {
-            //If we have already found the 3 of a kind
             if (index > 2 && index < 5)
             {
-                //lets add the higher cards
-                //if we add 2 and we are not at the end
-                //then we are at the lower end of the cards and we shoudln't add em
                 if (i + 2 >= sortedValueHand.Count)
                 {
                     cardIndexes[index] = i;
@@ -520,10 +491,8 @@ public class PlayerHand : GenHand
             }
             if (i + 2 < sortedValueHand.Count)
             {
-                //Do we have a 3 of a kind
                 if (sortedValueHand[i].MyValue == sortedValueHand[i + 2].MyValue)
                 {
-                    //Put the pair in the card indexes
                     cardIndexes[index] = i;
                     index++;
                     cardIndexes[index] = i + 1;
@@ -531,8 +500,6 @@ public class PlayerHand : GenHand
                     cardIndexes[index] = i + 2;
                     index++;
 
-
-                    //Lets get the highest card
                     if (i + 2 == sortedValueHand.Count - 1)
                     {
                         highCard = (int)sortedValueHand[i - 1].MyValue;
@@ -542,15 +509,11 @@ public class PlayerHand : GenHand
                         highCard = (int)sortedValueHand[sortedValueHand.Count - 1].MyValue;
                     }
 
-                    //Increment past the three with i
                     i += 2;
                 }
             }            
         }
 
-        //If we still haven't filled up the card indexes
-        //Lets go down from the start of the three of a kind
-        //And add cards until it's filled up
         int j = 1;
         while (index < 5)
         {
@@ -572,21 +535,16 @@ public class PlayerHand : GenHand
         int highCardIndex = -1;
         for (int i = sortedValueHand.Count - 1; i > -1; i--)
         {
-            //Check if we aren't out of bounds
             if (i-1 >= 0)
             {
-                //If the two are a pair
                 if (sortedValueHand[i] == sortedValueHand[i-1])
                 {
-                    //set index of one
                     cardIndexes[index] = i;
                     index++;
-                    //set index of other
                     cardIndexes[index] = i - 1;
-                    //decrement i so we skip over the next check
+                    index++;
                     i--;
                 }
-                //If it's not a pair then check if we can set it to high card
                 else if(highCardIndex < 0 || sortedValueHand[highCardIndex].MyValue < sortedValueHand[i].MyValue)
                 {
                     highCardIndex = i;
@@ -594,10 +552,7 @@ public class PlayerHand : GenHand
             }
         }
 
-        //Set the last index to the high card
         cardIndexes[4] = highCardIndex;
-        //Take the highest pair, which should be the lowest index in card indexes
-        //Calculate the value by doubling it
         int total = (int)sortedValueHand[cardIndexes[0]].MyValue * 2;
 
         int highCard = (int)sortedValueHand[highCardIndex].MyValue;
@@ -613,33 +568,25 @@ public class PlayerHand : GenHand
         int index = 0;
         for (int i = 0; i < sortedValueHand.Count - 1; i++)
         {
-            //If we have already found the pair
             if (index > 1 && index < 5)
             {
-                //lets add the highest cards
-                //if we add 3 and we are not at the end
-                //then we are at the lower end of the cards and we shoudln't add em
                 if (i + 3 >= sortedValueHand.Count)
                 {
                     cardIndexes[index] = i;
-                    i++;
+                    index++;
                 }
             }
 
             if (i+1 < sortedValueHand.Count)
             {
-                //Do we have a pair?
                 if (sortedValueHand[i].MyValue == sortedValueHand[i + 1].MyValue)
                 {
-                    //Put the pair in the card indexes
                     cardIndexes[index] = i;
                     index++;
                     cardIndexes[index] = i + 1;
                     index++;
-                    //Increment past the pair with i
                     i++;
 
-                    //Lets get the highest card
                     if (i + 1 == sortedValueHand.Count - 1)
                     {
                         highCard = (int)sortedValueHand[i - 1].MyValue;
@@ -653,10 +600,6 @@ public class PlayerHand : GenHand
 
         }
 
-
-        //If we still haven't filled up the card indexes
-        //Lets go down from the start of the pair
-        //And add cards until it's filled up
         int j = 1;
         while (index < 5)
         {
@@ -670,6 +613,22 @@ public class PlayerHand : GenHand
 
         potentialHandList.Add(CreateHandInfo(cardIndexes, Hand.OnePair, total, highCard));
 
+    }
+
+    protected int[] GetCardIndexesForValues(List<int> values)
+    {
+        int[] cardIndexes = new int[values.Count];
+        List<int> remainingIndexes = Enumerable.Range(0, sortedValueHand.Count).ToList();
+
+        for (int i = values.Count - 1; i >= 0; i--)
+        {
+            int targetValue = values[i] == 1 ? (int)VALUE.VA : values[i];
+            int cardIndex = remainingIndexes.Last(index => (int)sortedValueHand[index].MyValue == targetValue);
+            cardIndexes[i] = cardIndex;
+            remainingIndexes.Remove(cardIndex);
+        }
+
+        return cardIndexes;
     }
 
     public HandInfo CreateHandInfo(int[] cardIndexes, Hand handCombo, int total, int highCard)
