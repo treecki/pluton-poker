@@ -2,7 +2,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using Photon.Pun;
+using Photon.Realtime;
+using System.Linq;
 
+[RequireComponent(typeof(PokerAuthorityController))]
 public class PokerStateMachine : StateMachine
 {
     private static PokerStateMachine psm;
@@ -36,6 +40,9 @@ public class PokerStateMachine : StateMachine
 
     private float buyInAmount = 10f;
 
+    private PokerAuthorityController authorityController;
+    public PokerAuthorityController AuthorityController { get { return authorityController; } }
+
     public DealingState DealState { get { return stateDeal.dealState; } }
     public Bet HighestBet { get { return stateBetting.HighestBet; } }
 
@@ -47,7 +54,7 @@ public class PokerStateMachine : StateMachine
     protected GameStateDeal stateDeal;
     public GameStateDeal StateDeal { get { return stateDeal; } }
     protected GameStateBetting stateBetting;
-    public GameStateBetting StateBetting { get { return stateBetting; } } 
+    public GameStateBetting StateBetting { get { return stateBetting; } }
     protected GameStateRoundEnd stateRoundEnd;
     public GameStateRoundEnd StateRoundEnd { get { return stateRoundEnd; } }
 
@@ -62,12 +69,20 @@ public class PokerStateMachine : StateMachine
             psm = this;
         }
 
+        authorityController = GetComponent<PokerAuthorityController>();
         SetUpGame();
     }
 
     public void Start()
     {
-        StartRound();
+        if (authorityController.HasAuthority())
+        {
+            StartRound();
+        }
+        else
+        {
+            authorityController.PublishSnapshot("AwaitingAuthorityStart");
+        }
     }
 
     public void SetUpGame()
@@ -78,9 +93,11 @@ public class PokerStateMachine : StateMachine
         for (int i = 0; i < NUM_OF_PLAYERS; i++)
         {
             PokerPlayer p = new PokerPlayer(i);
-            p.AddMoney(buyInAmount); 
+            p.AddMoney(buyInAmount);
             playersInGame.Add(p);
         }
+
+        MapPhotonPlayersToSeats();
 
         queuePlayersInRound = new Queue<PokerPlayer>();
 
@@ -94,11 +111,21 @@ public class PokerStateMachine : StateMachine
 
     public void StartRound()
     {
+        if (!authorityController.TryBeginAuthorityMutation("StartRound"))
+        {
+            return;
+        }
+
         SetState(stateRoundStart);
     }
 
     public void RestartRound()
     {
+        if (!authorityController.TryBeginAuthorityMutation("RestartRound"))
+        {
+            return;
+        }
+
         betManager.NewRound();
         stateDeal.NewRound();
         DestroyAllVisuals();
@@ -108,13 +135,26 @@ public class PokerStateMachine : StateMachine
     public override void SetState(GameState inputState)
     {
         base.SetState(inputState);
+        authorityController.PublishSnapshot(inputState.GetType().Name);
         inputState.Run();
+        authorityController.PublishSnapshot(inputState.GetType().Name + ".RunComplete");
     }
 
     public PokerPlayer GetPlayerWithID(int _id)
     {
         PokerPlayer currPlayer = playersInGame.Find(x => x.PlayerID == _id);
         return currPlayer;
+    }
+
+    public PokerPlayer GetPlayerForLocalClient()
+    {
+        Player local = PhotonNetwork.LocalPlayer;
+        if (local == null)
+        {
+            return GetPlayerWithID(0);
+        }
+
+        return playersInGame.FirstOrDefault(player => player.ActorNumber == local.ActorNumber);
     }
 
     public void CreateAllHandsVisuals()
@@ -202,7 +242,6 @@ public class PokerStateMachine : StateMachine
 
         int counter = 0;
         PokerPlayer startPlayer;
-        //search for a start player that's not folded and return that
         do
         {
             counter++;
@@ -211,5 +250,55 @@ public class PokerStateMachine : StateMachine
         while (startPlayer.IsFolded && counter < playersInGame.Count);
 
         return startPlayer;
+    }
+
+    public void MapPhotonPlayersToSeats()
+    {
+        Player[] photonPlayers = PhotonNetwork.PlayerList;
+
+        for (int i = 0; i < playersInGame.Count; i++)
+        {
+            if (i < photonPlayers.Length)
+            {
+                playersInGame[i].BindToPhotonPlayer(photonPlayers[i]);
+            }
+            else
+            {
+                playersInGame[i].BindToPhotonPlayer(null);
+            }
+        }
+    }
+
+    public string GetCurrentPhaseName()
+    {
+        if (currentState == null)
+        {
+            return "Uninitialized";
+        }
+
+        return currentState.GetType().Name;
+    }
+
+    public int GetCurrentTurnActorNumber()
+    {
+        if (queuePlayersInRound == null || queuePlayersInRound.Count == 0)
+        {
+            return -1;
+        }
+
+        PokerPlayer player = queuePlayersInRound.Peek();
+        return player != null ? player.ActorNumber : -1;
+    }
+
+    public int GetBlindActorNumber(bool smallBlind)
+    {
+        PokerPlayer player = smallBlind ? BetManager.SmallBlindPlayer : BetManager.BigBlindPlayer;
+        return player != null ? player.ActorNumber : -1;
+    }
+
+    public int GetDealerActorNumber()
+    {
+        PokerPlayer dealer = BetManager.SmallBlindPlayer;
+        return dealer != null ? dealer.ActorNumber : -1;
     }
 }

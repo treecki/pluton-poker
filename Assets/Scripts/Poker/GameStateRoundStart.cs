@@ -12,8 +12,15 @@ public class GameStateRoundStart : GameState
     public override void Run()
     {
         base.Run();
+        if (!psm.AuthorityController.TryBeginAuthorityMutation("GameStateRoundStart.Run"))
+        {
+            return;
+        }
+
+        psm.MapPhotonPlayersToSeats();
         CreateDeck();
         AddRoundPlayers();
+        psm.AuthorityController.PublishSnapshot("RoundStart.ReadyToDeal");
         psm.SetState(psm.StateDeal);
     }
 
@@ -27,7 +34,6 @@ public class GameStateRoundStart : GameState
     {
         psm.queuePlayersInRound.Clear();
 
-        //Lets get the index of the small blind because we'll have to force them to start and play bet in the beginning
         List<PokerPlayer> activePlayers = psm.GetActivePlayers();
         int firstIndex = (activePlayers.IndexOf(psm.BetManager.BigBlindPlayer) + 1) % activePlayers.Count;
 

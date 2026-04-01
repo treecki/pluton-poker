@@ -14,7 +14,13 @@ public class GameStateDeal : GameState
     public override void Run()
     {
         base.Run();
+        if (!psm.AuthorityController.TryBeginAuthorityMutation("GameStateDeal.Run"))
+        {
+            return;
+        }
+
         Deal();
+        psm.AuthorityController.PublishSnapshot("Deal." + dealState);
     }
 
     protected void Deal()
@@ -90,6 +96,7 @@ public class GameStateDeal : GameState
             p.PlayerHand.ClearHand();
         }
 
+        psm.riverHand.ClearHand();
         dealState = 0;
     }
 }

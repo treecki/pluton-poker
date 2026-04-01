@@ -2,11 +2,15 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using Photon.Realtime;
 
 public class PokerPlayer
 {
     protected int playerID;
     public int PlayerID { get { return playerID; } }
+
+    public int ActorNumber { get; private set; }
+    public string DisplayName { get; private set; }
 
     protected float playerMoney;
     public float PlayerMoney { get { return playerMoney; } }
@@ -29,6 +33,31 @@ public class PokerPlayer
         playerID = _id;
         playerHand = new PlayerHand();
         currBet = new Bet(0, playerID);
+        ActorNumber = -1;
+        DisplayName = "Seat " + _id;
+    }
+
+    public void BindToPhotonPlayer(Player photonPlayer)
+    {
+        if (photonPlayer == null)
+        {
+            ActorNumber = -1;
+            DisplayName = "Seat " + playerID;
+            return;
+        }
+
+        ActorNumber = photonPlayer.ActorNumber;
+        DisplayName = string.IsNullOrEmpty(photonPlayer.NickName) ? "Player " + photonPlayer.ActorNumber : photonPlayer.NickName;
+    }
+
+    public bool CanRevealHoleCardsTo(Player viewer)
+    {
+        if (viewer == null)
+        {
+            return true;
+        }
+
+        return viewer.ActorNumber == ActorNumber;
     }
 
     public bool SetFolded(bool _isFolded)
