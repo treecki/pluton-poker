@@ -49,6 +49,8 @@ public class PokerStateMachine : StateMachine
 
     public Action<Bet> OnBetEvent = delegate { };
     public Action<int> OnFoldEvent = delegate { };
+    public Action<PokerGameSnapshot> OnSnapshotApplied = delegate { };
+    public Action<PokerGameSnapshot> OnRoundResultSnapshotApplied = delegate { };
 
     protected GameStateRoundStart stateRoundStart;
     public GameStateRoundStart StateRoundStart { get{ return stateRoundStart; } }
@@ -351,6 +353,7 @@ public class PokerStateMachine : StateMachine
         SyncQueueToSnapshot(snapshot);
         RefreshPlayerHandVisuals(snapshot.Players);
         ApplyRoundResultSnapshot(snapshot);
+        OnSnapshotApplied(snapshot);
     }
 
     private void ApplyPlayerSnapshots(List<PlayerSnapshot> playerSnapshots, int currentTurnActorNumber)
@@ -466,6 +469,7 @@ public class PokerStateMachine : StateMachine
         }
 
         Debug.Log("Round result snapshot winnerSeat=" + snapshot.WinningPlayerSeatIndex + " winnerActor=" + snapshot.WinningPlayerActorNumber + " hand=" + snapshot.WinningHand + " message=" + snapshot.WinningMessage + " revealAll=" + snapshot.Players.Any(player => player.HoleCardsVisibleToLocalClient && player.ActorNumber != GetCurrentLocalActorNumber()));
+        OnRoundResultSnapshotApplied(snapshot);
     }
 
     private int GetCurrentLocalActorNumber()

@@ -21,12 +21,14 @@ public class UI_RoundManager : MonoBehaviour
         psm = PokerStateMachine.PSM;
         psm.StateRoundEnd.OnStateStart += ShowRoundEnd;
         psm.StateRoundEnd.OnStateEnd += HideRoundEnd;
+        psm.OnRoundResultSnapshotApplied += ShowRoundResultFromSnapshot;
     }
 
     private void OnDisable()
     {
         psm.StateRoundEnd.OnStateStart -= ShowRoundEnd;
         psm.StateRoundEnd.OnStateEnd -= HideRoundEnd;
+        psm.OnRoundResultSnapshotApplied -= ShowRoundResultFromSnapshot;
     }
 
     private void ShowRoundEnd()
@@ -38,6 +40,17 @@ public class UI_RoundManager : MonoBehaviour
     private void HideRoundEnd()
     {
         RoundOver.SetActive(false);
+    }
+
+    private void ShowRoundResultFromSnapshot(PokerGameSnapshot snapshot)
+    {
+        if (snapshot == null || !snapshot.ShowdownResolved)
+        {
+            return;
+        }
+
+        RoundOver.SetActive(true);
+        roundEndText.SetText("Round " + psm.BetManager.RoundNumber + " over!\n " + snapshot.WinningMessage);
     }
 
     public void RestartRound()
