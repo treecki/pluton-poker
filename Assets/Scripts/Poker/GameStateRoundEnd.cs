@@ -17,11 +17,15 @@ public class GameStateRoundEnd : GameState
 
     public override void Run()
     {
+        if (!psm.AuthorityController.TryBeginAuthorityMutation(PokerAuthorityController.MutationReasonGameStateRoundEndRun))
+        {
+            return;
+        }
 
         if (psm.queuePlayersInRound.Count <= 1)
         {
             winningPlayer = psm.queuePlayersInRound.Peek();
-            winningMessage = "Winner is " + winningPlayer.PlayerID + "  by default.";
+            winningMessage = "Winner is " + winningPlayer.DisplayName + " by default.";
         }
         else
         {
@@ -30,10 +34,11 @@ public class GameStateRoundEnd : GameState
             {
                 Debug.Log("P" + p.PlayerID + "  has " + p.PlayerHand.FinalHandInfo.HandCombo);
             }
-            winningMessage = "Winner is " + winningPlayer.PlayerID + " with a hand of " + winningPlayer.PlayerHand.FinalHandInfo.HandCombo;
+            winningMessage = "Winner is " + winningPlayer.DisplayName + " with a hand of " + winningPlayer.PlayerHand.FinalHandInfo.HandCombo;
         }
 
         psm.BetManager.GivePotToPlayer(winningPlayer);
+        psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseRoundEndResolved);
 
         base.Run();
     }
@@ -45,7 +50,8 @@ public class GameStateRoundEnd : GameState
         winningMessage = "";
     }
 
-    //Evaluate all the hands so we know we have the final hand info ready
+    // Each remaining player evaluates against the shared community cards before
+    // winner comparison so the authority is comparing finalized hand metadata.
     protected void EvaluateAllHandsInRound()
     {
         foreach (PokerPlayer p in psm.queuePlayersInRound)
@@ -54,6 +60,7 @@ public class GameStateRoundEnd : GameState
         }
     }
 
+    // Returns the player ID of the best hand still in the round.
     protected int EvaluateHands()
     {
         EvaluateAllHandsInRound();
@@ -73,12 +80,10 @@ public class GameStateRoundEnd : GameState
                 int compareResults = CompareHands(p.PlayerHand, highestPlayer.PlayerHand);
                 if (compareResults < 0)
                 {
-                    //new Highest hand
                     highestPlayer = p;
                 }
                 else if (compareResults == 0)
                 {
-                    //we tied
                 }
 
             }
@@ -87,6 +92,8 @@ public class GameStateRoundEnd : GameState
         return highestPlayer.PlayerID;
     }
 
+    // Negative means the first hand wins, positive means the second hand wins, and
+    // zero means the current comparison inputs are tied on the supported tiebreakers.
     private int CompareHands(PlayerHand negHand, PlayerHand posHand)
     {
         Hand negCardHand = negHand.FinalHandInfo.HandCombo;
@@ -98,7 +105,6 @@ public class GameStateRoundEnd : GameState
         int negHighCard = negHand.FinalHandInfo.HighCard;
         int posHighCard = posHand.FinalHandInfo.HighCard;
 
-        //eval hands
         if (negCardHand > posCardHand)
         {
             return -1;
@@ -107,9 +113,8 @@ public class GameStateRoundEnd : GameState
         {
             return 1;
         }
-        else // if the hands are the same evaluate the values
+        else
         {
-            //first evaluate the higher value
             if (negTotal > posTotal)
             {
                 return -1;
@@ -118,9 +123,8 @@ public class GameStateRoundEnd : GameState
             {
                 return 1;
             }
-            else //if both have the same then check highest card
+            else
             {
-                //first evaluate the higher value
                 if (negHighCard > posHighCard)
                 {
                     return -1;
@@ -129,7 +133,7 @@ public class GameStateRoundEnd : GameState
                 {
                     return 1;
                 }
-                else //its a fucking tie
+                else
                 {
                     return 0;
                 }

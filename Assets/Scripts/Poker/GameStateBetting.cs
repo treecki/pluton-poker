@@ -18,7 +18,13 @@ public class GameStateBetting : GameState
     public override void Run()
     {
         base.Run();
+        if (!psm.AuthorityController.TryBeginAuthorityMutation(PokerAuthorityController.MutationReasonGameStateBettingRun))
+        {
+            return;
+        }
+
         StartBetRound();
+        psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseBettingStarted);
     }
 
     private void StartBetRound()
@@ -53,8 +59,12 @@ public class GameStateBetting : GameState
     private void RequestAction()
     {
         PokerPlayer nextPlayer = psm.GetNextPlayerInQueue();
-        nextPlayer.canInput = true;
+        currPlayerBetting = nextPlayer;
+        // Only the seat owned by this client should be interactable in multiplayer.
+        // Offline we still allow local control so the table remains playable without Photon.
+        nextPlayer.canInput = psm.AuthorityController.CanControlPlayer(nextPlayer);
         nextPlayer.OnPlayerEvent += ReceiveAction;
+        psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseBettingWaitingForAction);
     }
 
 
@@ -62,10 +72,12 @@ public class GameStateBetting : GameState
     {
         base.ResetState();
         highestBet = new Bet(0, -1);
+        currPlayerBetting = null;
     }
 
     private void ReceiveAction(Bet newBet)
     {
+        if (!psm.AuthorityController.TryBeginAuthorityMutation(PokerAuthorityController.MutationReasonGameStateBettingReceiveAction)) { return; }
         if (psm.GetNextPlayerInQueue().PlayerID != newBet.playerID) { return; }
 
         Debug.Log("Receive Action: " + newBet.amount);
@@ -79,13 +91,14 @@ public class GameStateBetting : GameState
             AddBet(newBet);
         }
 
+        psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseBettingActionApplied);
+
         if (psm.queuePlayersInRound.Count <= 1)
         {
             GoToEndRound();
         }
         else if (highestBet.playerID == psm.GetNextPlayerInQueue().PlayerID)
         {
-            //We need to skip over the next player and go to round
             GoToDealing();
         }
         else
@@ -98,8 +111,6 @@ public class GameStateBetting : GameState
     {
         PokerPlayer p = psm.GetPlayerWithID(newBet.playerID);
 
-        //To check for highest bet, we check how the current bet on the player has changed
-        //New bet could be a call or a raise, but it won't include the amount previously bet
         if (highestBet.playerID == -1 || highestBet.amount < p.CurrBet.amount)
         {
             highestBet = p.CurrBet;
@@ -107,7 +118,7 @@ public class GameStateBetting : GameState
         }
 
         psm.queuePlayersInRound.Enqueue(p);
-        psm.BetManager.AddToPot(newBet.amount);        
+        psm.BetManager.AddToPot(newBet.amount);
     }
 
     protected void GoToDealing()

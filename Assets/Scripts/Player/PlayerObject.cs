@@ -27,7 +27,7 @@ public class PlayerObject : MonoBehaviour
     {
         player = _player;
         playerNum = player.PlayerID;
-        username = "Player " + playerNum;
+        username = player.DisplayName;
     }
 
     public void CreateCards()
@@ -53,6 +53,12 @@ public class PlayerObject : MonoBehaviour
 
     public void Call()
     {
+        if (!psm.AuthorityController.CanControlPlayer(player))
+        {
+            Debug.Log("Cannot control this seat from the local client.");
+            return;
+        }
+
         Debug.Log("Highest bet is "+ psm.HighestBet.amount);
         bool callBet = player.RaiseCurrentBetTo(psm.HighestBet.amount);
 
@@ -64,6 +70,12 @@ public class PlayerObject : MonoBehaviour
 
     public void Raise(float amount)
     {
+        if (!psm.AuthorityController.CanControlPlayer(player))
+        {
+            Debug.Log("Cannot control this seat from the local client.");
+            return;
+        }
+
         bool raiseBet = player.RaiseCurrentBetTo(psm.HighestBet.amount + amount);
 
         if (!raiseBet)
@@ -74,6 +86,12 @@ public class PlayerObject : MonoBehaviour
 
     public void Fold()
     {
+        if (!psm.AuthorityController.CanControlPlayer(player))
+        {
+            Debug.Log("Cannot control this seat from the local client.");
+            return;
+        }
+
         bool foldPlayer = player.SetFolded(true);
 
         if (!foldPlayer)
@@ -84,6 +102,12 @@ public class PlayerObject : MonoBehaviour
 
     public void Check()
     {
+        if (!psm.AuthorityController.CanControlPlayer(player))
+        {
+            Debug.Log("Cannot control this seat from the local client.");
+            return;
+        }
+
         if (psm.HighestBet.amount == 0)
         {
             bool check = player.RaiseCurrentBetTo(psm.HighestBet.amount);
