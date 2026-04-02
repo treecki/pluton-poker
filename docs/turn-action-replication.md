@@ -5,9 +5,14 @@ This pass builds the command path on top of the Milestone 1 authority backbone.
 ## Added
 - `PokerActionCommand`
   - explicit command model for `Fold`, `Check`, `Call`, `Raise`, and `AutoFold`
+  - used as the network payload for betting actions: clients send it to authority, then authority rebroadcasts the resolved action
 - Photon event codes for:
   - action request -> authority
   - action resolved -> all clients
+
+## Photon event code note
+`ActionRequestEventCode = 41` and `ActionResolvedEventCode = 42` are just project-level custom Photon event IDs.
+They are not special built-in Photon values — they simply need to be unique within our own multiplayer event usage.
 
 ## Updated
 - `PokerAuthorityController`

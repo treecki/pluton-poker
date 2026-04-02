@@ -20,13 +20,13 @@ public class GameStateBetting : GameState
     public override void Run()
     {
         base.Run();
-        if (!psm.AuthorityController.TryBeginAuthorityMutation("GameStateBetting.Run"))
+        if (!psm.AuthorityController.TryBeginAuthorityMutation(PokerAuthorityController.MutationReasonGameStateBettingRun))
         {
             return;
         }
 
         StartBetRound();
-        psm.AuthorityController.PublishSnapshot("Betting.Started");
+        psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseBettingStarted);
     }
 
     public void Tick()
@@ -89,9 +89,11 @@ public class GameStateBetting : GameState
         currPlayerBetting = nextPlayer;
         actionResolvedForTurn = false;
         turnStartedAt = Time.time;
+        // Only the seat owned by this client should be interactable in multiplayer.
+        // Offline we still allow local control so the table remains playable without Photon.
         nextPlayer.canInput = psm.AuthorityController.CanControlPlayer(nextPlayer);
         nextPlayer.OnPlayerEvent += ReceiveLocalAction;
-        psm.AuthorityController.PublishSnapshot("Betting.WaitingForAction");
+        psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseBettingWaitingForAction);
     }
 
     public override void ResetState()
@@ -123,7 +125,7 @@ public class GameStateBetting : GameState
 
     public void ReceiveNetworkAction(PokerActionCommand command)
     {
-        if (!psm.AuthorityController.TryBeginAuthorityMutation("GameStateBetting.ReceiveNetworkAction")) { return; }
+        if (!psm.AuthorityController.TryBeginAuthorityMutation(PokerAuthorityController.MutationReasonGameStateBettingReceiveNetworkAction)) { return; }
         if (command == null) { return; }
         if (currPlayerBetting == null) { return; }
         if (currPlayerBetting.PlayerID != command.PlayerId) { return; }
@@ -153,7 +155,7 @@ public class GameStateBetting : GameState
             AddBetFromResolvedAction(actingPlayer, command);
         }
 
-        psm.AuthorityController.PublishSnapshot("Betting.ActionApplied");
+        psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseBettingActionApplied);
         psm.AuthorityController.BroadcastResolvedAction(command);
 
         if (psm.queuePlayersInRound.Count <= 1)
@@ -182,7 +184,7 @@ public class GameStateBetting : GameState
             return;
         }
 
-        psm.AuthorityController.PublishSnapshot("Betting.RemoteActionResolved");
+        psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseBettingRemoteActionResolved);
     }
 
     private bool ApplyCommand(PokerPlayer player, PokerActionCommand command)
@@ -226,6 +228,8 @@ public class GameStateBetting : GameState
         psm.BetManager.AddToPot(command.Amount);
     }
 
+    // Action commands are the network payload for betting input: clients send them to the
+    // authority, then the authority validates/applies them and rebroadcasts the resolved result.
     private PokerActionCommand TranslateBetToCommand(Bet newBet)
     {
         PokerPlayer player = psm.GetPlayerWithID(newBet.playerID);

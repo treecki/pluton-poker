@@ -33,6 +33,17 @@ This pass establishes the authority/snapshot backbone for multiplayer MVP.
 - Produces a consistent serializable snapshot model for later RPC/event replication
 - Prevents local clients from controlling seats they do not own
 
+## Snapshot concept in plain English
+A snapshot is a serializable "photo" of the table at one moment in time.
+Instead of asking remote clients to infer state from a long chain of scene-side mutations,
+the authority can capture the important shared data in one model: phase, turn owner, blinds,
+pot, community cards, and per-player public state.
+
+In this milestone, snapshots are captured locally by the authority as the architecture backbone.
+They are not yet the thing driving remote client restoration. The point is to define one stable
+shape for the game state now, so Milestone 2+ can broadcast commands and/or snapshots without
+having to redesign the state model again.
+
 ## What is intentionally deferred to Milestone 2+
 - actual RPC/event broadcast of commands and snapshots
 - remote command validation pipeline (`Fold`, `Check`, `Call`, `Raise`)

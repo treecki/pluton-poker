@@ -17,7 +17,7 @@ public class GameStateRoundEnd : GameState
 
     public override void Run()
     {
-        if (!psm.AuthorityController.TryBeginAuthorityMutation("GameStateRoundEnd.Run"))
+        if (!psm.AuthorityController.TryBeginAuthorityMutation(PokerAuthorityController.MutationReasonGameStateRoundEndRun))
         {
             return;
         }
@@ -38,7 +38,7 @@ public class GameStateRoundEnd : GameState
         }
 
         psm.BetManager.GivePotToPlayer(winningPlayer);
-        psm.AuthorityController.PublishSnapshot("RoundEnd.Resolved");
+        psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseRoundEndResolved);
 
         base.Run();
     }
@@ -50,6 +50,8 @@ public class GameStateRoundEnd : GameState
         winningMessage = "";
     }
 
+    // Each remaining player evaluates against the shared community cards before
+    // winner comparison so the authority is comparing finalized hand metadata.
     protected void EvaluateAllHandsInRound()
     {
         foreach (PokerPlayer p in psm.queuePlayersInRound)
@@ -58,6 +60,7 @@ public class GameStateRoundEnd : GameState
         }
     }
 
+    // Returns the player ID of the best hand still in the round.
     protected int EvaluateHands()
     {
         EvaluateAllHandsInRound();
@@ -89,6 +92,8 @@ public class GameStateRoundEnd : GameState
         return highestPlayer.PlayerID;
     }
 
+    // Negative means the first hand wins, positive means the second hand wins, and
+    // zero means the current comparison inputs are tied on the supported tiebreakers.
     private int CompareHands(PlayerHand negHand, PlayerHand posHand)
     {
         Hand negCardHand = negHand.FinalHandInfo.HandCombo;

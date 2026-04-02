@@ -8,9 +8,29 @@ public class PokerAuthorityController : MonoBehaviourPunCallbacks
 {
     public static PokerAuthorityController Instance { get; private set; }
 
+    // Photon custom event codes only need to be unique within this project's event usage.
+    // 41/42 are arbitrary picks for Milestone 2's action request/resolution flow.
     public const byte ActionRequestEventCode = 41;
     public const byte ActionResolvedEventCode = 42;
     public const float DefaultTurnTimeoutSeconds = 15f;
+
+    public const string MutationReasonStartRound = "StartRound";
+    public const string MutationReasonRestartRound = "RestartRound";
+    public const string MutationReasonGameStateRoundStartRun = "GameStateRoundStart.Run";
+    public const string MutationReasonGameStateDealRun = "GameStateDeal.Run";
+    public const string MutationReasonGameStateBettingRun = "GameStateBetting.Run";
+    public const string MutationReasonGameStateBettingReceiveAction = "GameStateBetting.ReceiveAction";
+    public const string MutationReasonGameStateBettingReceiveNetworkAction = "GameStateBetting.ReceiveNetworkAction";
+    public const string MutationReasonGameStateRoundEndRun = "GameStateRoundEnd.Run";
+
+    public const string SnapshotPhaseAwaitingAuthorityStart = "AwaitingAuthorityStart";
+    public const string SnapshotPhaseMasterClientSwitched = "MasterClientSwitched";
+    public const string SnapshotPhaseRoundStartReadyToDeal = "RoundStart.ReadyToDeal";
+    public const string SnapshotPhaseBettingStarted = "Betting.Started";
+    public const string SnapshotPhaseBettingWaitingForAction = "Betting.WaitingForAction";
+    public const string SnapshotPhaseBettingActionApplied = "Betting.ActionApplied";
+    public const string SnapshotPhaseBettingRemoteActionResolved = "Betting.RemoteActionResolved";
+    public const string SnapshotPhaseRoundEndResolved = "RoundEnd.Resolved";
 
     private PokerGameSnapshot latestSnapshot;
     public PokerGameSnapshot LatestSnapshot { get { return latestSnapshot; } }
@@ -51,6 +71,8 @@ public class PokerAuthorityController : MonoBehaviourPunCallbacks
             return false;
         }
 
+        // Offline/single-player sessions do not have Photon ownership, so we allow
+        // local control here and only enforce seat ownership once we are in a room.
         if (!PhotonNetwork.InRoom)
         {
             return true;
@@ -144,7 +166,7 @@ public class PokerAuthorityController : MonoBehaviourPunCallbacks
     public override void OnMasterClientSwitched(Player newMasterClient)
     {
         base.OnMasterClientSwitched(newMasterClient);
-        PublishSnapshot("MasterClientSwitched");
+        PublishSnapshot(SnapshotPhaseMasterClientSwitched);
     }
 
     private object[] SerializeAction(PokerActionCommand command)

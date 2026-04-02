@@ -8,6 +8,8 @@ using UnityEngine;
 [Serializable]
 public class PokerGameSnapshot
 {
+    public const string DealPhasePrefix = "Deal.";
+
     public string Phase;
     public int DealerActorNumber;
     public int SmallBlindActorNumber;
@@ -21,6 +23,14 @@ public class PokerGameSnapshot
     public string UpdatedBy;
     public string UpdatedAtUtc;
 
+    public static string BuildDealPhaseName(DealingState dealState)
+    {
+        return DealPhasePrefix + dealState;
+    }
+
+    // A snapshot is a read-only picture of the authoritative table state at a moment in time.
+    // We capture it on the authority side so later milestones can broadcast or rehydrate from
+    // one consistent model instead of rebuilding state from scattered scene objects.
     public static PokerGameSnapshot Capture(PokerStateMachine psm, string phaseOverride = null)
     {
         PokerGameSnapshot snapshot = new PokerGameSnapshot();

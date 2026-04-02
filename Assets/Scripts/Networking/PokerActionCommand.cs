@@ -3,6 +3,8 @@ using System;
 [Serializable]
 public class PokerActionCommand
 {
+    // This is the betting command payload we send across Photon: client -> authority as a
+    // request, then authority -> all clients again once that action has been validated/applied.
     public PokerActionType ActionType;
     public int ActorNumber;
     public int PlayerId;
