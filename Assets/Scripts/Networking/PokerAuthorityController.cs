@@ -59,9 +59,14 @@ public class PokerAuthorityController : MonoBehaviourPunCallbacks
         PhotonNetwork.NetworkingClient.EventReceived -= NetworkingClient_EventReceived;
     }
 
+    public bool IsOffline()
+    {
+        return !PhotonNetwork.InRoom;
+    }
+
     public bool HasAuthority()
     {
-        return !PhotonNetwork.InRoom || PhotonNetwork.IsMasterClient;
+        return IsOffline() || PhotonNetwork.IsMasterClient;
     }
 
     public bool CanControlPlayer(PokerPlayer player)
@@ -73,7 +78,7 @@ public class PokerAuthorityController : MonoBehaviourPunCallbacks
 
         // Offline/single-player sessions do not have Photon ownership, so we allow
         // local control here and only enforce seat ownership once we are in a room.
-        if (!PhotonNetwork.InRoom)
+        if (IsOffline())
         {
             return true;
         }
@@ -116,7 +121,7 @@ public class PokerAuthorityController : MonoBehaviourPunCallbacks
             return;
         }
 
-        if (!PhotonNetwork.InRoom)
+        if (IsOffline())
         {
             psm.StateBetting.ReceiveNetworkAction(command);
             return;
@@ -134,7 +139,7 @@ public class PokerAuthorityController : MonoBehaviourPunCallbacks
             return;
         }
 
-        if (!PhotonNetwork.InRoom)
+        if (IsOffline())
         {
             return;
         }
@@ -169,6 +174,10 @@ public class PokerAuthorityController : MonoBehaviourPunCallbacks
         PublishSnapshot(SnapshotPhaseMasterClientSwitched);
     }
 
+    // For simple command payloads we serialize to an object[] of Photon-friendly values.
+    // If we later need richer data (lists, dictionaries, nested models), we should either
+    // flatten them into primitives, serialize them into a transport-safe format, or register
+    // custom Photon types if the shape becomes stable and worth formalizing.
     private object[] SerializeAction(PokerActionCommand command)
     {
         return new object[]

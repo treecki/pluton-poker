@@ -29,6 +29,8 @@ public class GameStateBetting : GameState
         psm.AuthorityController.PublishSnapshot(PokerAuthorityController.SnapshotPhaseBettingStarted);
     }
 
+    // Only the authority advances timeout-driven turn resolution so clients do not
+    // race each other trying to auto-resolve the same stalled turn.
     public void Tick()
     {
         if (!psm.AuthorityController.HasAuthority())
@@ -105,6 +107,8 @@ public class GameStateBetting : GameState
         actionResolvedForTurn = false;
     }
 
+    // Local UI/input still produces a Bet-like signal; this translates that into the
+    // network command model and routes it through the authority path.
     private void ReceiveLocalAction(Bet newBet)
     {
         PokerActionCommand command = TranslateBetToCommand(newBet);
@@ -123,6 +127,9 @@ public class GameStateBetting : GameState
         }
     }
 
+    // The authority is the only place where a betting command becomes real shared state.
+    // This method validates turn ownership / actor ownership, applies the result, then
+    // advances the round and broadcasts the resolved action.
     public void ReceiveNetworkAction(PokerActionCommand command)
     {
         if (!psm.AuthorityController.TryBeginAuthorityMutation(PokerAuthorityController.MutationReasonGameStateBettingReceiveNetworkAction)) { return; }
@@ -146,11 +153,7 @@ public class GameStateBetting : GameState
         nextPlayer.canInput = false;
         nextPlayer.OnPlayerEvent -= ReceiveLocalAction;
 
-        if (command.ActionType == PokerActionType.Fold || command.ActionType == PokerActionType.AutoFold)
-        {
-            // folded players stay out of the queue
-        }
-        else
+        if (command.ActionType != PokerActionType.Fold && command.ActionType != PokerActionType.AutoFold)
         {
             AddBetFromResolvedAction(actingPlayer, command);
         }
@@ -172,6 +175,9 @@ public class GameStateBetting : GameState
         }
     }
 
+    // Non-authority clients receive the already-resolved command after authority approval.
+    // For this milestone we only hook that into snapshot publication; fuller remote state
+    // rehydration/UI replay is still a later pass.
     public void OnRemoteActionResolved(PokerActionCommand command)
     {
         if (psm.AuthorityController.HasAuthority())
