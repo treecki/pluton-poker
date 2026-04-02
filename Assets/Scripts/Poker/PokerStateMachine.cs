@@ -34,6 +34,7 @@ public class PokerStateMachine : StateMachine
     public GenHand riverHand;
 
     GameObject riverHandGameObject;
+    private string lastAppliedSnapshotAtUtc;
 
     private BettingManager betManager;
     public BettingManager BetManager { get { return betManager; } }
@@ -91,6 +92,11 @@ public class PokerStateMachine : StateMachine
         {
             stateBetting.Tick();
         }
+
+        if (!authorityController.HasAuthority())
+        {
+            ApplyLatestAuthoritativeSnapshot();
+        }
     }
 
     public void SetUpGame()
@@ -108,6 +114,7 @@ public class PokerStateMachine : StateMachine
         MapPhotonPlayersToSeats();
 
         queuePlayersInRound = new Queue<PokerPlayer>();
+        lastAppliedSnapshotAtUtc = null;
 
         betManager = new BettingManager(this);
 
@@ -136,6 +143,7 @@ public class PokerStateMachine : StateMachine
 
         betManager.NewRound();
         stateDeal.NewRound();
+        lastAppliedSnapshotAtUtc = null;
         DestroyAllVisuals();
         StartRound();
     }
@@ -308,5 +316,148 @@ public class PokerStateMachine : StateMachine
     {
         PokerPlayer dealer = BetManager.SmallBlindPlayer;
         return dealer != null ? dealer.ActorNumber : -1;
+    }
+
+    // Milestone 2.5 starts here: non-authority clients consume the latest authoritative
+    // snapshot as real state input so remote tables stop depending on local inference.
+    public void ApplyLatestAuthoritativeSnapshot()
+    {
+        PokerGameSnapshot snapshot = authorityController != null ? authorityController.LatestSnapshot : null;
+        if (snapshot == null)
+        {
+            return;
+        }
+
+        if (lastAppliedSnapshotAtUtc == snapshot.UpdatedAtUtc)
+        {
+            return;
+        }
+
+        ApplySnapshot(snapshot);
+        lastAppliedSnapshotAtUtc = snapshot.UpdatedAtUtc;
+    }
+
+    public void ApplySnapshot(PokerGameSnapshot snapshot)
+    {
+        if (snapshot == null || snapshot.Players == null)
+        {
+            return;
+        }
+
+        Debug.Log("Applying authoritative snapshot phase=" + snapshot.Phase + " updatedAt=" + snapshot.UpdatedAtUtc + " turnActor=" + snapshot.CurrentTurnActorNumber);
+
+        ApplyPlayerSnapshots(snapshot.Players, snapshot.CurrentTurnActorNumber);
+        ApplyCommunityCardSnapshot(snapshot);
+        SyncQueueToSnapshot(snapshot);
+        RefreshPlayerHandVisuals(snapshot.Players);
+    }
+
+    private void ApplyPlayerSnapshots(List<PlayerSnapshot> playerSnapshots, int currentTurnActorNumber)
+    {
+        foreach (PlayerSnapshot snapshot in playerSnapshots)
+        {
+            PokerPlayer player = GetPlayerWithID(snapshot.SeatIndex);
+            if (player == null)
+            {
+                continue;
+            }
+
+            player.ApplySnapshotState(snapshot);
+            player.SetCanInput(snapshot.ActorNumber == GetCurrentLocalActorNumber() && snapshot.ActorNumber == currentTurnActorNumber);
+        }
+    }
+
+    private void ApplyCommunityCardSnapshot(PokerGameSnapshot snapshot)
+    {
+        if (riverHand == null)
+        {
+            riverHand = new GenHand();
+        }
+
+        riverHand.ClearHand();
+        if (snapshot.CommunityCards != null)
+        {
+            foreach (CardSnapshot card in snapshot.CommunityCards)
+            {
+                Card rebuiltCard = card.ToCard();
+                if (rebuiltCard != null)
+                {
+                    riverHand.DealCard(rebuiltCard);
+                }
+            }
+        }
+
+        if (snapshot.CommunityCardCount > 0)
+        {
+            CreateRiverHandVisual();
+        }
+        else if (riverHandGameObject != null)
+        {
+            RiverObject riverObject = riverHandGameObject.GetComponent<RiverObject>();
+            if (riverObject != null)
+            {
+                riverObject.ClearCards();
+            }
+        }
+    }
+
+    private void SyncQueueToSnapshot(PokerGameSnapshot snapshot)
+    {
+        if (queuePlayersInRound == null)
+        {
+            queuePlayersInRound = new Queue<PokerPlayer>();
+        }
+
+        queuePlayersInRound.Clear();
+        foreach (PokerPlayer player in playersInGame)
+        {
+            if (!player.IsFolded && !player.IsPlayerBroke())
+            {
+                queuePlayersInRound.Enqueue(player);
+            }
+        }
+
+        if (snapshot.CurrentTurnActorNumber == -1 || queuePlayersInRound.Count == 0)
+        {
+            return;
+        }
+
+        int safety = queuePlayersInRound.Count;
+        while (queuePlayersInRound.Count > 0 && queuePlayersInRound.Peek().ActorNumber != snapshot.CurrentTurnActorNumber && safety-- > 0)
+        {
+            SendNextToBackOfQueue();
+        }
+    }
+
+    private void RefreshPlayerHandVisuals(List<PlayerSnapshot> playerSnapshots)
+    {
+        if (PokerHandsTransform == null)
+        {
+            return;
+        }
+
+        Dictionary<int, PlayerSnapshot> snapshotBySeat = playerSnapshots.ToDictionary(snapshot => snapshot.SeatIndex, snapshot => snapshot);
+        foreach (Transform child in PokerHandsTransform)
+        {
+            PlayerObject playerObject = child.GetComponent<PlayerObject>();
+            if (playerObject == null || playerObject.Player == null)
+            {
+                continue;
+            }
+
+            PlayerSnapshot snapshot;
+            if (!snapshotBySeat.TryGetValue(playerObject.Player.PlayerID, out snapshot))
+            {
+                continue;
+            }
+
+            playerObject.SetHand(playerObject.Player);
+            playerObject.ApplySnapshotCards(snapshot.HoleCards);
+        }
+    }
+
+    private int GetCurrentLocalActorNumber()
+    {
+        return PhotonNetwork.LocalPlayer != null ? PhotonNetwork.LocalPlayer.ActorNumber : -1;
     }
 }

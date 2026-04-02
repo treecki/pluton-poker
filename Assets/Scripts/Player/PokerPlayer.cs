@@ -112,6 +112,20 @@ public class PokerPlayer
         return true;
     }
 
+    public void ApplySnapshotState(PlayerSnapshot snapshot)
+    {
+        if (snapshot == null)
+        {
+            return;
+        }
+
+        ActorNumber = snapshot.ActorNumber;
+        DisplayName = snapshot.DisplayName;
+        playerMoney = snapshot.Chips;
+        currBet.amount = snapshot.CurrentBet;
+        isFolded = snapshot.Folded;
+    }
+
     public void ResetCurrentBet()
     {
         currBet.amount = 0;
@@ -120,6 +134,11 @@ public class PokerPlayer
     public void AddMoney(float _amount)
     {
         playerMoney += _amount;
+    }
+
+    public void SetCanInput(bool value)
+    {
+        canInput = value;
     }
 
     public bool IsPlayerBroke() { return playerMoney <= 0; }

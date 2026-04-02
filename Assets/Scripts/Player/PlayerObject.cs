@@ -33,7 +33,36 @@ public class PlayerObject : MonoBehaviour
     public void CreateCards()
     {
         List<Card> cardsInHand = psm.GetPlayerWithID(playerNum).PlayerHand.DealtHand;
+        CreateCardsFromList(cardsInHand);
+    }
 
+    public void ApplySnapshotCards(List<CardSnapshot> cardSnapshots)
+    {
+        ClearCards();
+        if (cardSnapshots == null)
+        {
+            return;
+        }
+
+        foreach (CardSnapshot snapshot in cardSnapshots)
+        {
+            GameObject spawnedCard = Instantiate(psm.cardPrefab);
+            spawnedCard.transform.parent = cardHandTransform;
+            CardObject cardObject = spawnedCard.GetComponent<CardObject>();
+
+            Card card = snapshot.ToCard();
+            if (card == null)
+            {
+                card = new Card { MySuit = SUIT.H, MyValue = VALUE.VA };
+            }
+
+            cardObject.SetCard(card);
+            cardObject.SetFaceUp(!snapshot.IsHidden);
+        }
+    }
+
+    private void CreateCardsFromList(List<Card> cardsInHand)
+    {
         foreach (Card c in cardsInHand)
         {
             GameObject spawnedCard = Instantiate(psm.cardPrefab);
