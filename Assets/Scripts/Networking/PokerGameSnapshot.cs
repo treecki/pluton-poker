@@ -20,6 +20,11 @@ public class PokerGameSnapshot
     public int CommunityCardCount;
     public List<CardSnapshot> CommunityCards = new List<CardSnapshot>();
     public List<PlayerSnapshot> Players = new List<PlayerSnapshot>();
+    public int WinningPlayerSeatIndex = -1;
+    public int WinningPlayerActorNumber = -1;
+    public string WinningMessage;
+    public string WinningHand;
+    public bool ShowdownResolved;
     public string UpdatedBy;
     public string UpdatedAtUtc;
 
@@ -42,6 +47,14 @@ public class PokerGameSnapshot
         snapshot.Pot = psm.BetManager != null ? psm.BetManager.PotAmount : 0f;
         snapshot.HighestBet = psm.HighestBet.amount;
         snapshot.CommunityCardCount = psm.riverHand != null ? psm.riverHand.CardHand.Count : 0;
+        snapshot.WinningPlayerSeatIndex = psm.StateRoundEnd != null && psm.StateRoundEnd.WinningPlayer != null ? psm.StateRoundEnd.WinningPlayer.PlayerID : -1;
+        snapshot.WinningPlayerActorNumber = psm.StateRoundEnd != null && psm.StateRoundEnd.WinningPlayer != null ? psm.StateRoundEnd.WinningPlayer.ActorNumber : -1;
+        snapshot.WinningMessage = psm.StateRoundEnd != null ? psm.StateRoundEnd.WinningMessage : string.Empty;
+        snapshot.WinningHand = psm.StateRoundEnd != null && psm.StateRoundEnd.WinningPlayer != null && psm.StateRoundEnd.WinningPlayer.PlayerHand != null && psm.StateRoundEnd.WinningPlayer.PlayerHand.FinalHandInfo != null
+            ? psm.StateRoundEnd.WinningPlayer.PlayerHand.FinalHandInfo.HandCombo.ToString()
+            : string.Empty;
+        snapshot.ShowdownResolved = snapshot.WinningPlayerSeatIndex >= 0 && phaseOverride == PokerAuthorityController.SnapshotPhaseRoundEndResolved;
+        bool revealAllHoleCards = snapshot.ShowdownResolved && psm.StateRoundEnd != null && psm.StateRoundEnd.ShouldRevealAllRemainingHands();
         snapshot.UpdatedBy = PhotonNetwork.LocalPlayer != null ? PhotonNetwork.LocalPlayer.NickName : "Offline";
         snapshot.UpdatedAtUtc = DateTime.UtcNow.ToString("o");
 
@@ -52,7 +65,7 @@ public class PokerGameSnapshot
 
         if (psm.PlayersInGame != null)
         {
-            snapshot.Players = psm.PlayersInGame.Select(player => PlayerSnapshot.FromPlayer(psm, player)).ToList();
+            snapshot.Players = psm.PlayersInGame.Select(player => PlayerSnapshot.FromPlayer(psm, player, revealAllHoleCards)).ToList();
         }
 
         return snapshot;
@@ -73,7 +86,7 @@ public class PlayerSnapshot
     public bool HoleCardsVisibleToLocalClient;
     public List<CardSnapshot> HoleCards = new List<CardSnapshot>();
 
-    public static PlayerSnapshot FromPlayer(PokerStateMachine psm, PokerPlayer player)
+    public static PlayerSnapshot FromPlayer(PokerStateMachine psm, PokerPlayer player, bool revealAllHoleCards = false)
     {
         PlayerSnapshot snapshot = new PlayerSnapshot();
         snapshot.SeatIndex = player.PlayerID;
@@ -84,7 +97,7 @@ public class PlayerSnapshot
         snapshot.Folded = player.IsFolded;
         snapshot.AllIn = Mathf.Approximately(player.PlayerMoney, 0f);
         snapshot.IsLocalPlayer = player.ActorNumber == PhotonNetwork.LocalPlayer?.ActorNumber;
-        snapshot.HoleCardsVisibleToLocalClient = player.CanRevealHoleCardsTo(PhotonNetwork.LocalPlayer);
+        snapshot.HoleCardsVisibleToLocalClient = player.CanRevealHoleCardsTo(PhotonNetwork.LocalPlayer, revealAllHoleCards);
 
         if (snapshot.HoleCardsVisibleToLocalClient)
         {

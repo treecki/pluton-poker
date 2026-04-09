@@ -138,6 +138,15 @@ Tasks:
 Done when:
 - All clients agree on same board, same winner, same chip totals.
 
+Implementation plan:
+1. Add explicit snapshot/result fields for showdown-facing state the remote clients need to render consistently (winner actor/seat, winner message, revealed cards if needed).
+2. Make authority-owned deal phases publish authoritative card state in a form remote clients can rehydrate without inferring from local deck state.
+3. Drive flop/turn/river visibility entirely from authoritative snapshot data so all clients reveal community cards in the same order.
+4. Add showdown/reveal rules for hole cards so only the right cards become visible at the right time.
+5. Publish winner-resolution data from authority after hand evaluation and pot payout.
+6. Apply winner/result snapshot data on non-authority clients so all clients agree on winner text, revealed cards, and chip totals.
+7. Add sanity logging/testing around board consistency, winner consistency, and post-payout chip totals.
+
 ---
 
 ## Milestone 4 — Room-to-Table UX Glue

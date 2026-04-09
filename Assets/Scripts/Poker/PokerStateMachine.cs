@@ -49,6 +49,8 @@ public class PokerStateMachine : StateMachine
 
     public Action<Bet> OnBetEvent = delegate { };
     public Action<int> OnFoldEvent = delegate { };
+    public Action<PokerGameSnapshot> OnSnapshotApplied = delegate { };
+    public Action<PokerGameSnapshot> OnRoundResultSnapshotApplied = delegate { };
 
     protected GameStateRoundStart stateRoundStart;
     public GameStateRoundStart StateRoundStart { get{ return stateRoundStart; } }
@@ -350,6 +352,8 @@ public class PokerStateMachine : StateMachine
         ApplyCommunityCardSnapshot(snapshot);
         SyncQueueToSnapshot(snapshot);
         RefreshPlayerHandVisuals(snapshot.Players);
+        ApplyRoundResultSnapshot(snapshot);
+        OnSnapshotApplied(snapshot);
     }
 
     private void ApplyPlayerSnapshots(List<PlayerSnapshot> playerSnapshots, int currentTurnActorNumber)
@@ -363,7 +367,8 @@ public class PokerStateMachine : StateMachine
             }
 
             player.ApplySnapshotState(snapshot);
-            player.SetCanInput(snapshot.ActorNumber == GetCurrentLocalActorNumber() && snapshot.ActorNumber == currentTurnActorNumber);
+            bool canInput = !snapshot.Folded && snapshot.ActorNumber == GetCurrentLocalActorNumber() && snapshot.ActorNumber == currentTurnActorNumber;
+            player.SetCanInput(canInput);
         }
     }
 
@@ -454,6 +459,17 @@ public class PokerStateMachine : StateMachine
             playerObject.SetHand(playerObject.Player);
             playerObject.ApplySnapshotCards(snapshot.HoleCards);
         }
+    }
+
+    private void ApplyRoundResultSnapshot(PokerGameSnapshot snapshot)
+    {
+        if (!snapshot.ShowdownResolved)
+        {
+            return;
+        }
+
+        Debug.Log("Round result snapshot winnerSeat=" + snapshot.WinningPlayerSeatIndex + " winnerActor=" + snapshot.WinningPlayerActorNumber + " hand=" + snapshot.WinningHand + " message=" + snapshot.WinningMessage + " revealAll=" + snapshot.Players.Any(player => player.HoleCardsVisibleToLocalClient && player.ActorNumber != GetCurrentLocalActorNumber()));
+        OnRoundResultSnapshotApplied(snapshot);
     }
 
     private int GetCurrentLocalActorNumber()

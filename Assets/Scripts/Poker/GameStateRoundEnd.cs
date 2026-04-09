@@ -50,6 +50,11 @@ public class GameStateRoundEnd : GameState
         winningMessage = "";
     }
 
+    public bool ShouldRevealAllRemainingHands()
+    {
+        return queuePlayersInRound != null && queuePlayersInRound.Count > 1;
+    }
+
     // Each remaining player evaluates against the shared community cards before
     // winner comparison so the authority is comparing finalized hand metadata.
     protected void EvaluateAllHandsInRound()

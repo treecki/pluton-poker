@@ -50,8 +50,13 @@ public class PokerPlayer
         DisplayName = string.IsNullOrEmpty(photonPlayer.NickName) ? "Player " + photonPlayer.ActorNumber : photonPlayer.NickName;
     }
 
-    public bool CanRevealHoleCardsTo(Player viewer)
+    public bool CanRevealHoleCardsTo(Player viewer, bool revealToAll = false)
     {
+        if (revealToAll)
+        {
+            return true;
+        }
+
         if (viewer == null)
         {
             return true;
