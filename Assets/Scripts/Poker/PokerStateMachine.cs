@@ -85,6 +85,14 @@ public class PokerStateMachine : StateMachine
         }
     }
 
+    public void Update()
+    {
+        if (stateBetting != null)
+        {
+            stateBetting.Tick();
+        }
+    }
+
     public void SetUpGame()
     {
         playersInGame = new List<PokerPlayer>();
@@ -206,7 +214,7 @@ public class PokerStateMachine : StateMachine
         List<PokerPlayer> activePlayers = new List<PokerPlayer>();
         foreach (PokerPlayer p in playersInGame)
         {
-            if (!p.IsPlayerBroke())
+            if (!p.IsPlayerBroke() && !p.IsFolded)
             {
                 activePlayers.Add(p);
             }
