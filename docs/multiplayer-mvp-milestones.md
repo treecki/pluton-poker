@@ -79,6 +79,52 @@ Done when:
 
 ---
 
+## Milestone 2.5 — Snapshot Rehydration + Remote Table Sync
+
+Purpose: make non-authority clients rebuild a coherent table state from authority-approved data so Milestone 3 can focus on cards/reveal logic instead of basic sync repair.
+
+Tasks:
+- Apply `PokerGameSnapshot` on non-authority clients as real input, not just logging/debug state
+- Rehydrate shared table state from snapshot data:
+  - phase
+  - dealer/blinds
+  - current turn actor
+  - pot
+  - highest bet
+  - folded/all-in flags
+  - player chip counts/current bets
+- Keep seat-to-actor mapping and display names consistent after snapshot apply
+- Refresh gameplay UI from authoritative state after every accepted action:
+  - whose turn
+  - call amount / highest bet
+  - pot
+  - chip totals
+  - folded markers
+  - latest action / status text
+- Drive card presentation rules from snapshot state:
+  - local player sees own hole cards
+  - opponents remain hidden until allowed
+  - community card visibility/count matches authority state
+- Make resolved actions visibly update remote clients without relying on local guesswork
+- Add a late-join / reconnect bootstrap path where a client can apply the latest snapshot and land in a coherent mid-hand state
+- Keep snapshot application separate from optional visual animation polish
+
+Done when:
+- A non-authority client can join or rejoin mid-hand, apply the latest snapshot, and render a coherent table state.
+- Remote clients stay visually consistent with authority after accepted actions.
+- Milestone 3 can build on snapshot-driven rendering instead of bespoke per-case sync logic.
+
+Implementation plan:
+1. Add a client-side `ApplySnapshot(...)` entry point in the game state layer so non-authority clients can consume `PokerGameSnapshot` as real gameplay input.
+2. Rehydrate player runtime state from snapshot data (chips, current bet, folded/all-in, actor mapping, display names) without breaking local ownership rules.
+3. Rebuild turn/pot/highest-bet state from snapshot data so remote clients stop relying on local inference after resolved actions.
+4. Refresh table visuals and gameplay UI from snapshot application, including turn indicator, visible community cards, and hidden vs visible hole-card rules.
+5. Make resolved-action events trigger snapshot-driven remote updates instead of lightweight placeholder behavior.
+6. Add a bootstrap/reconnect path so a joining client can receive/apply the latest snapshot and land in a coherent mid-hand state.
+7. Add debug logging / sanity checks for snapshot mismatches so desyncs are easier to spot before Milestone 3 work begins.
+
+---
+
 ## Milestone 3 — Deal/Reveal Sync + Winner Resolution
 
 Purpose: ensure every client sees consistent cards and outcomes.

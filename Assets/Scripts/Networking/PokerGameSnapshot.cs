@@ -116,6 +116,27 @@ public class CardSnapshot
         };
     }
 
+    public Card ToCard()
+    {
+        if (IsHidden)
+        {
+            return null;
+        }
+
+        SUIT parsedSuit;
+        VALUE parsedValue;
+        if (!Enum.TryParse(Suit, out parsedSuit) || !Enum.TryParse(Value, out parsedValue))
+        {
+            return null;
+        }
+
+        return new Card
+        {
+            MyValue = parsedValue,
+            MySuit = parsedSuit
+        };
+    }
+
     public static CardSnapshot Hidden()
     {
         return new CardSnapshot
