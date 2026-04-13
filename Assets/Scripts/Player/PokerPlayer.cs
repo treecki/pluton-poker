@@ -125,7 +125,14 @@ public class PokerPlayer
         }
 
         ActorNumber = snapshot.ActorNumber;
-        DisplayName = snapshot.DisplayName;
+        if (string.IsNullOrEmpty(snapshot.DisplayName))
+        {
+            DisplayName = snapshot.ActorNumber > 0 ? "Player " + snapshot.ActorNumber : "Seat " + playerID;
+        }
+        else
+        {
+            DisplayName = snapshot.DisplayName;
+        }
         playerMoney = snapshot.Chips;
         currBet.amount = snapshot.CurrentBet;
         isFolded = snapshot.Folded;
